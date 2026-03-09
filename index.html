@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Liberty PEA</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Liberty PEA" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0f1117;
+      --surface: #1a1d27;
+      --border:  #2a2d3a;
+      --accent:  #10b981;
+      --accent2: #6366f1;
+      --green:   #34c97a;
+      --red:     #f7564f;
+      --yellow:  #f59e0b;
+      --text:    #e8eaf0;
+      --muted:   #7a7f96;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--text);
+      overflow: hidden;
+    }
+    #app {
+      height: 100dvh; display: flex; flex-direction: column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    }
+
+    /* ── Header ── */
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .app-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .app-title span { color: var(--accent); }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text); font-size: 16px;
+      transition: background 0.2s;
+    }
+    .icon-btn:hover { background: var(--border); }
+
+    /* ── Scroll area ── */
+    .tab-content { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+    .tab-content.active { display: block; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: calc(60px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex;
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      cursor: pointer; background: none; border: none;
+      color: var(--muted); font-size: 10px; font-weight: 500;
+      transition: color 0.2s; padding: 6px 0;
+    }
+    .tab-btn .tab-icon { font-size: 20px; line-height: 1; }
+    .tab-btn.active { color: var(--accent); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;
+    }
+
+    /* ── Stats grid ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Colors ── */
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    .yellow { color: var(--yellow); }
+    .accent { color: var(--accent); }
+    .muted { color: var(--muted); }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 100px;
+    }
+    .badge-green { background: rgba(52,201,122,0.15); color: var(--green); }
+    .badge-red { background: rgba(247,86,79,0.15); color: var(--red); }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .badge-accent { background: rgba(16,185,129,0.15); color: var(--accent); }
+    .badge-purple { background: rgba(99,102,241,0.15); color: var(--accent2); }
+
+    /* ── PEA Status banner ── */
+    .pea-banner {
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(99,102,241,0.1));
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .pea-banner-icon { font-size: 24px; }
+    .pea-banner-text { flex: 1; }
+    .pea-banner-title { font-size: 13px; font-weight: 700; color: var(--accent); }
+    .pea-banner-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Donut chart ── */
+    .chart-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto; }
+    .chart-center {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      text-align: center; pointer-events: none;
+    }
+    .chart-center-value { font-size: 18px; font-weight: 700; }
+    .chart-center-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Allocation legend ── */
+    .alloc-legend { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .alloc-item { display: flex; align-items: center; gap: 8px; }
+    .alloc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .alloc-name { font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alloc-pct { font-size: 13px; font-weight: 600; }
+    .alloc-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
+    .alloc-bar { height: 4px; border-radius: 2px; }
+
+    /* ── Position cards ── */
+    .position-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 10px;
+    }
+    .position-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .position-name { font-size: 15px; font-weight: 600; }
+    .position-isin { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .position-price { text-align: right; }
+    .position-price-val { font-size: 16px; font-weight: 700; }
+    .position-price-chg { font-size: 11px; margin-top: 2px; }
+    .position-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .position-stat-label { font-size: 10px; color: var(--muted); }
+    .position-stat-value { font-size: 13px; font-weight: 600; margin-top: 2px; }
+    .position-alloc { margin-bottom: 10px; }
+    .alloc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .alloc-row-label { font-size: 11px; color: var(--muted); }
+    .alloc-row-value { font-size: 11px; font-weight: 600; }
+    .alloc-track { height: 6px; background: var(--border); border-radius: 3px; position: relative; }
+    .alloc-fill { height: 6px; border-radius: 3px; transition: width 0.3s; }
+    .alloc-target-marker {
+      position: absolute; top: -2px; width: 2px; height: 10px;
+      background: var(--text); border-radius: 1px; transform: translateX(-50%);
+    }
+    .position-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background 0.2s; text-align: center;
+    }
+    .btn-sm:hover { background: var(--border); }
+    .btn-sm.danger { color: var(--red); border-color: rgba(247,86,79,0.3); }
+    .btn-sm.danger:hover { background: rgba(247,86,79,0.1); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .empty-icon { font-size: 48px; }
+    .empty-title { font-size: 17px; font-weight: 600; }
+    .empty-desc { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+    .btn-outline:hover { background: rgba(16,185,129,0.1); }
+
+    /* ── DCA ── */
+    .fee-display {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 12px;
+    }
+    .fee-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+    .fee-label { font-size: 13px; color: var(--muted); }
+    .fee-value { font-size: 13px; font-weight: 600; }
+    .dca-suggestion {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(99,102,241,0.05));
+      border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .dca-suggestion-title { font-size: 12px; color: var(--accent); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .dca-position-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .dca-position-why { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .dca-calc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .dca-calc-item { background: var(--bg); border-radius: 8px; padding: 10px; }
+    .dca-calc-label { font-size: 11px; color: var(--muted); }
+    .dca-calc-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
+    /* ── Purchase history ── */
+    .purchase-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .purchase-row:last-child { border-bottom: none; }
+    .purchase-info { flex: 1; }
+    .purchase-name { font-weight: 600; }
+    .purchase-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .purchase-amount { text-align: right; font-weight: 600; }
+    .purchase-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Conseil IA ── */
+    .advice-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      font-size: 14px; line-height: 1.7; white-space: pre-wrap;
+    }
+    .advice-loading {
+      text-align: center; padding: 32px; color: var(--muted); font-size: 14px;
+    }
+
+    /* ── Settings ── */
+    .setting-group { margin-bottom: 16px; }
+    .setting-label {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
+    }
+    .setting-input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px 12px; color: var(--text);
+      font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .setting-input:focus { border-color: var(--accent); }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row-label { font-size: 14px; }
+    .setting-row-value { font-size: 14px; font-weight: 600; color: var(--accent); }
+
+    /* ── Broker tip ── */
+    .broker-tip {
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 10px; padding: 12px 14px; margin-top: 12px;
+    }
+    .broker-tip-title { font-size: 13px; font-weight: 700; color: var(--yellow); margin-bottom: 4px; }
+    .broker-tip-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 100; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border); width: 100%; max-height: 90vh;
+      overflow-y: auto; padding: 20px 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      background: var(--border); border: none; border-radius: 50%; width: 28px; height: 28px;
+      color: var(--text); font-size: 16px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px 12px; color: var(--text);
+      font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Confirm purchase modal ── */
+    .confirm-detail { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+    .confirm-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+    .confirm-row-total {
+      display: flex; justify-content: space-between; padding: 10px 0 0;
+      border-top: 1px solid var(--border); margin-top: 6px;
+      font-size: 16px; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div class="app-title">Liberty <span>PEA</span></div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="refreshAllPrices()" title="Actualiser les prix">↻</button>
+      <button class="icon-btn" onclick="openAddPosition()" title="Ajouter une position">＋</button>
+    </div>
+  </div>
+
+  <!-- Tab: Tableau de bord -->
+  <div class="tab-content active" id="tab-bord">
+    <div id="dashboard-content"></div>
+  </div>
+
+  <!-- Tab: Portefeuille -->
+  <div class="tab-content" id="tab-portfolio">
+    <div id="portfolio-content"></div>
+  </div>
+
+  <!-- Tab: DCA Mensuel -->
+  <div class="tab-content" id="tab-dca">
+    <div id="dca-content"></div>
+  </div>
+
+  <!-- Tab: Conseil IA -->
+  <div class="tab-content" id="tab-ia">
+    <div class="card">
+      <div class="card-title">Analyse IA de votre PEA</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+        Claude analyse votre portefeuille, votre allocation cible, l'impact des frais LCL et la fiscalité PEA pour vous donner des conseils personnalisés.
+      </p>
+      <button class="btn btn-primary" onclick="getAdvice()">🤖 Analyser mon PEA</button>
+    </div>
+    <div id="advice-output"></div>
+  </div>
+
+  <!-- Tab: Paramètres -->
+  <div class="tab-content" id="tab-settings">
+    <div id="settings-content"></div>
+  </div>
+
+  <!-- Tab bar -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('bord', this)">
+      <span class="tab-icon">🏛️</span>Bord
+    </button>
+    <button class="tab-btn" onclick="switchTab('portfolio', this)">
+      <span class="tab-icon">📊</span>Portefeuille
+    </button>
+    <button class="tab-btn" onclick="switchTab('dca', this)">
+      <span class="tab-icon">📅</span>DCA
+    </button>
+    <button class="tab-btn" onclick="switchTab('ia', this)">
+      <span class="tab-icon">🤖</span>Conseil
+    </button>
+    <button class="tab-btn" onclick="switchTab('settings', this)">
+      <span class="tab-icon">⚙️</span>Réglages
+    </button>
+  </nav>
+</div>
+
+<!-- Modal: Add/Edit Position -->
+<div class="modal-overlay" id="positionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="positionModalTitle">Ajouter une position</div>
+      <button class="modal-close" onclick="closeModal('positionModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nom de l'ETF *</label>
+      <input class="form-input" id="pos-name" placeholder="ex: Vanguard FTSE All-World" />
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label class="form-label">ISIN</label>
+        <input class="form-input" id="pos-isin" placeholder="IE00B3RBWM25" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ticker Yahoo *</label>
+        <input class="form-input" id="pos-ticker" placeholder="VWCE.DE" />
+        <div class="form-hint">Ex: VWCE.DE, CW8.PA, IWDA.AS</div>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label class="form-label">Nombre de parts</label>
+        <input class="form-input" id="pos-shares" type="number" min="0" step="0.001" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prix moyen (€)</label>
+        <input class="form-input" id="pos-avgprice" type="number" min="0" step="0.01" placeholder="0.00" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Allocation cible (%)</label>
+      <input class="form-input" id="pos-target" type="number" min="0" max="100" step="1" placeholder="100" />
+      <div class="form-hint" id="alloc-remaining"></div>
+    </div>
+    <input type="hidden" id="pos-edit-id" />
+    <button class="btn btn-primary" onclick="savePosition()" style="margin-top:4px;">Enregistrer</button>
+  </div>
+</div>
+
+<!-- Modal: Confirm Purchase -->
+<div class="modal-overlay" id="purchaseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Confirmer l'achat</div>
+      <button class="modal-close" onclick="closeModal('purchaseModal')">✕</button>
+    </div>
+    <div id="purchase-confirm-content"></div>
+    <div class="form-row-2" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label class="form-label">Parts achetées</label>
+        <input class="form-input" id="buy-shares" type="number" min="1" step="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prix par part (€)</label>
+        <input class="form-input" id="buy-price" type="number" min="0" step="0.01" />
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="confirmPurchase()">✓ Confirmer l'achat</button>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  const STORAGE_KEY = 'liberty-pea-v1';
+  const COLORS = ['#10b981','#6366f1','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#06b6d4','#f97316','#ec4899','#14b8a6'];
+
+  let state = {
+    positions: [],
+    purchases: [],
+    settings: {
+      peaOpenDate: '2021-03-03',
+      monthlyBudget: 300,
+      feeRate: 0.5,
+      feeMin: 5,
+    },
+    prices: {},
+  };
+
+  let allocChart = null;
+  let pendingPurchase = null;
+
+  // ── Storage ────────────────────────────────────────────
+  function save() {
+    const toSave = { positions: state.positions, purchases: state.purchases, settings: state.settings };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        state.positions = d.positions || [];
+        state.purchases = d.purchases || [];
+        state.settings = { ...state.settings, ...d.settings };
+      }
+    } catch {}
+  }
+
+  // ── Calculations ───────────────────────────────────────
+  function calcPortfolio() {
+    let totalValue = 0, totalInvested = 0;
+
+    const positions = state.positions.map((pos, i) => {
+      const currentPrice = state.prices[pos.ticker]?.price ?? pos.avgPrice ?? 0;
+      const value = pos.shares * currentPrice;
+      const invested = pos.shares * (pos.avgPrice || 0);
+      const gain = value - invested;
+      const gainPct = invested > 0 ? (gain / invested * 100) : 0;
+      totalValue += value;
+      totalInvested += invested;
+      return { ...pos, currentPrice, value, invested, gain, gainPct, color: COLORS[i % COLORS.length] };
+    });
+
+    const withAlloc = positions.map(pos => ({
+      ...pos,
+      allocation: totalValue > 0 ? (pos.value / totalValue * 100) : 0,
+    }));
+
+    const totalGain = totalValue - totalInvested;
+    const totalGainPct = totalInvested > 0 ? (totalGain / totalInvested * 100) : 0;
+    const tax = Math.max(totalGain, 0) * 0.172;
+    const netGain = totalGain - tax;
+
+    return { positions: withAlloc, totalValue, totalInvested, totalGain, totalGainPct, tax, netGain };
+  }
+
+  function calcFee(amount) {
+    const fee = Math.max(amount * state.settings.feeRate / 100, state.settings.feeMin);
+    const effectivePct = (fee / amount * 100);
+    return { fee, effectivePct };
+  }
+
+  function getDCASuggestion() {
+    const { positions } = calcPortfolio();
+    if (!positions.length) return null;
+    const sorted = [...positions].sort((a, b) => (b.target - b.allocation) - (a.target - a.allocation));
+    const pick = sorted[0];
+    const budget = state.settings.monthlyBudget;
+    const { fee, effectivePct } = calcFee(budget);
+    const price = pick.currentPrice || pick.avgPrice || 1;
+    const shares = Math.max(Math.floor((budget - fee) / price), 0);
+    const cost = shares * price;
+    const total = cost + fee;
+    return { position: pick, fee, effectivePct, shares, price, cost, total, budget };
+  }
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  function fmt(n, d=2) { return n != null ? n.toFixed(d) : '—'; }
+  function fmtPct(n) { return n != null ? (n >= 0 ? '+' : '') + n.toFixed(2) + '%' : '—'; }
+  function fmtDate(iso) { return new Date(iso).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }); }
+
+  // ── Tab switching ──────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    renderTab(name);
+  }
+
+  function renderTab(name) {
+    if (name === 'bord') renderDashboard();
+    else if (name === 'portfolio') renderPortfolio();
+    else if (name === 'dca') renderDCA();
+    else if (name === 'settings') renderSettings();
+  }
+
+  // ── Render: Dashboard ──────────────────────────────────
+  function renderDashboard() {
+    const { positions, totalValue, totalInvested, totalGain, totalGainPct, tax, netGain } = calcPortfolio();
+    const gainClass = totalGain >= 0 ? 'green' : 'red';
+
+    const peaYears = ((Date.now() - new Date(state.settings.peaOpenDate)) / (365.25*24*3600*1000)).toFixed(1);
+    const taxStatus = parseFloat(peaYears) >= 5;
+
+    let html = `
+      <div class="pea-banner">
+        <div class="pea-banner-icon">${taxStatus ? '✅' : '⏳'}</div>
+        <div class="pea-banner-text">
+          <div class="pea-banner-title">${taxStatus ? 'PEA mature — Fiscalité avantageuse' : 'PEA en cours — ' + peaYears + ' ans'}</div>
+          <div class="pea-banner-sub">${taxStatus ? '17,2% prélèvements sociaux uniquement sur les gains' : 'Encore ' + (5 - parseFloat(peaYears)).toFixed(1) + ' ans pour atteindre 5 ans'}</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Valeur du PEA</div>
+          <div class="stat-value">${fmt(totalValue)} €</div>
+          <div class="stat-sub">${positions.length} position${positions.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total investi</div>
+          <div class="stat-value">${fmt(totalInvested)} €</div>
+          <div class="stat-sub">Plafond : 150 000 €</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Plus-value brute</div>
+          <div class="stat-value ${gainClass}">${fmt(totalGain)} €</div>
+          <div class="stat-sub ${gainClass}">${fmtPct(totalGainPct)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Gain net (après 17,2%)</div>
+          <div class="stat-value ${gainClass}">${fmt(netGain)} €</div>
+          <div class="stat-sub muted">Impôt estimé : ${fmt(tax)} €</div>
+        </div>
+      </div>`;
+
+    if (positions.length === 0) {
+      html += `
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">Votre PEA est vide</div>
+          <div class="empty-desc">Ajoutez votre première position pour commencer à suivre votre portefeuille.</div>
+          <button class="btn btn-primary" style="max-width:240px;margin-top:8px;" onclick="openAddPosition()">＋ Ajouter une position</button>
+        </div>`;
+    } else {
+      html += `<div class="card">
+        <div class="card-title">Répartition du portefeuille</div>
+        <div class="chart-wrap">
+          <canvas id="allocChart"></canvas>
+          <div class="chart-center">
+            <div class="chart-center-value">${fmt(totalValue, 0)} €</div>
+            <div class="chart-center-label">Valeur totale</div>
+          </div>
+        </div>
+        <div class="alloc-legend">`;
+
+      positions.forEach(pos => {
+        const deviation = pos.target - pos.allocation;
+        const devClass = Math.abs(deviation) < 3 ? 'accent' : (deviation > 0 ? 'yellow' : 'muted');
+        html += `
+          <div>
+            <div class="alloc-item">
+              <div class="alloc-dot" style="background:${pos.color}"></div>
+              <div class="alloc-name">${pos.name}</div>
+              <div class="alloc-pct">${fmt(pos.allocation, 1)}%</div>
+            </div>
+            <div class="alloc-bar-wrap" style="margin-left:18px;">
+              <div class="alloc-bar" style="width:${pos.allocation}%;background:${pos.color};"></div>
+            </div>
+          </div>`;
+      });
+
+      html += `</div></div>`;
+
+      // Recent purchases
+      const recent = [...state.purchases].reverse().slice(0, 3);
+      if (recent.length > 0) {
+        html += `<div class="card"><div class="card-title">Derniers achats</div>`;
+        recent.forEach(p => {
+          const pos = state.positions.find(x => x.id === p.positionId);
+          html += `<div class="purchase-row">
+            <div class="purchase-info">
+              <div class="purchase-name">${pos?.name || 'Position supprimée'}</div>
+              <div class="purchase-detail">${p.shares} parts × ${fmt(p.price)} € · Frais : ${fmt(p.fees)} €</div>
+            </div>
+            <div class="purchase-amount">
+              <div>${fmt(p.total)} €</div>
+              <div class="purchase-date">${fmtDate(p.date)}</div>
+            </div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+    }
+
+    document.getElementById('dashboard-content').innerHTML = html;
+
+    if (positions.length > 0) {
+      const ctx = document.getElementById('allocChart')?.getContext('2d');
+      if (ctx) {
+        if (allocChart) allocChart.destroy();
+        allocChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: positions.map(p => p.name),
+            datasets: [{ data: positions.map(p => p.value), backgroundColor: positions.map(p => p.color), borderWidth: 2, borderColor: '#1a1d27' }]
+          },
+          options: {
+            cutout: '72%', plugins: { legend: { display: false }, tooltip: {
+              callbacks: { label: ctx => ` ${fmt(ctx.raw)} € (${fmt(ctx.raw / totalValue * 100, 1)}%)` }
+            }},
+            animation: { duration: 400 }
+          }
+        });
+      }
+    }
+  }
+
+  // ── Render: Portfolio ──────────────────────────────────
+  function renderPortfolio() {
+    const { positions } = calcPortfolio();
+    let html = '';
+
+    if (positions.length === 0) {
+      html = `<div class="empty-state">
+        <div class="empty-icon">📈</div>
+        <div class="empty-title">Aucune position</div>
+        <div class="empty-desc">Ajoutez vos ETF pour suivre leur performance en temps réel.</div>
+        <button class="btn btn-primary" style="max-width:240px;margin-top:8px;" onclick="openAddPosition()">＋ Ajouter une position</button>
+      </div>`;
+    } else {
+      const totalAlloc = state.positions.reduce((s, p) => s + (p.target || 0), 0);
+      if (Math.abs(totalAlloc - 100) > 0.5) {
+        html += `<div class="broker-tip" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.25);margin-bottom:12px;">
+          <div class="broker-tip-title" style="color:var(--accent2);">⚠️ Allocations cibles</div>
+          <div class="broker-tip-text">Total des allocations cibles : <strong>${fmt(totalAlloc, 1)}%</strong>. Idéalement, la somme doit être 100%.</div>
+        </div>`;
+      }
+
+      positions.forEach(pos => {
+        const priceData = state.prices[pos.ticker];
+        const chgClass = (priceData?.changePercent ?? 0) >= 0 ? 'green' : 'red';
+        const gainClass = pos.gain >= 0 ? 'green' : 'red';
+        const allocPct = Math.min(pos.allocation, 100);
+        const targetPct = Math.min(pos.target || 0, 100);
+        const deviation = (pos.target || 0) - pos.allocation;
+
+        html += `<div class="position-card">
+          <div class="position-header">
+            <div>
+              <div class="position-name">${pos.name}</div>
+              <div class="position-isin">${pos.isin || pos.ticker} · <span class="badge badge-accent" style="font-size:10px;">${pos.ticker}</span></div>
+            </div>
+            <div class="position-price">
+              <div class="position-price-val">${fmt(pos.currentPrice)} €</div>
+              <div class="position-price-chg ${chgClass}">${fmtPct(priceData?.changePercent)}</div>
+            </div>
+          </div>
+
+          <div class="position-stats">
+            <div>
+              <div class="position-stat-label">Parts</div>
+              <div class="position-stat-value">${pos.shares}</div>
+            </div>
+            <div>
+              <div class="position-stat-label">Valeur</div>
+              <div class="position-stat-value">${fmt(pos.value)} €</div>
+            </div>
+            <div>
+              <div class="position-stat-label">Gain</div>
+              <div class="position-stat-value ${gainClass}">${fmtPct(pos.gainPct)}</div>
+            </div>
+          </div>
+
+          <div class="position-alloc">
+            <div class="alloc-row">
+              <div class="alloc-row-label">Allocation actuelle</div>
+              <div class="alloc-row-value">${fmt(pos.allocation, 1)}% / cible ${pos.target || 0}%</div>
+            </div>
+            <div class="alloc-track">
+              <div class="alloc-fill" style="width:${allocPct}%;background:${pos.color};"></div>
+              <div class="alloc-target-marker" style="left:${targetPct}%;"></div>
+            </div>
+            <div style="font-size:11px;margin-top:4px;" class="${Math.abs(deviation) < 3 ? 'accent' : 'yellow'}">
+              ${Math.abs(deviation) < 3 ? '✓ En ligne avec la cible' : (deviation > 0 ? '▲ Sous-pondéré de ' : '▼ Sur-pondéré de ') + fmt(Math.abs(deviation), 1) + '%'}
+            </div>
+          </div>
+
+          <div class="position-actions">
+            <button class="btn-sm" onclick="openEditPosition('${pos.id}')">✏️ Modifier</button>
+            <button class="btn-sm danger" onclick="deletePosition('${pos.id}')">🗑 Supprimer</button>
+          </div>
+        </div>`;
+      });
+
+      html += `<button class="btn btn-outline" onclick="openAddPosition()">＋ Ajouter une position</button>`;
+    }
+
+    document.getElementById('portfolio-content').innerHTML = html;
+  }
+
+  // ── Render: DCA ────────────────────────────────────────
+  function renderDCA() {
+    const { positions } = calcPortfolio();
+    const budget = state.settings.monthlyBudget;
+    const { fee, effectivePct } = calcFee(budget);
+    const feeClass = effectivePct < 1 ? 'green' : effectivePct < 2 ? 'yellow' : 'red';
+    const suggestion = getDCASuggestion();
+
+    let html = `
+      <div class="card">
+        <div class="card-title">Budget mensuel & frais</div>
+        <div class="fee-display">
+          <div class="fee-row">
+            <div class="fee-label">Budget mensuel</div>
+            <div class="fee-value">${fmt(budget)} €</div>
+          </div>
+          <div class="fee-row">
+            <div class="fee-label">Commission LCL (${state.settings.feeRate}%, min ${state.settings.feeMin}€)</div>
+            <div class="fee-value ${feeClass}">${fmt(fee)} € (${effectivePct.toFixed(2)}%)</div>
+          </div>
+          <div class="fee-row">
+            <div class="fee-label">Budget net disponible</div>
+            <div class="fee-value">${fmt(budget - fee)} €</div>
+          </div>
+        </div>`;
+
+    if (effectivePct > 2) {
+      html += `<div class="broker-tip">
+        <div class="broker-tip-title">⚠️ Frais trop élevés</div>
+        <div class="broker-tip-text">À ${budget}€, les frais représentent ${effectivePct.toFixed(1)}% — c'est trop. Passez en dessous de 2% en investissant au moins ${fmt(state.settings.feeMin / (state.settings.feeRate / 100), 0)}€ par ordre. Vous pouvez aussi envisager un courtier moins cher (Boursorama, Fortuneo, Bourse Direct).</div>
+      </div>`;
+    }
+    html += `</div>`;
+
+    if (!suggestion) {
+      html += `<div class="empty-state">
+        <div class="empty-icon">📅</div>
+        <div class="empty-title">Aucune position</div>
+        <div class="empty-desc">Ajoutez des positions pour obtenir une suggestion d'achat mensuel.</div>
+      </div>`;
+    } else {
+      const pos = suggestion.position;
+      const gainClass = suggestion.cost >= 0 ? '' : 'red';
+      html += `
+        <div class="dca-suggestion">
+          <div class="dca-suggestion-title">💡 Suggestion ce mois</div>
+          <div class="dca-position-name">${pos.name}</div>
+          <div class="dca-position-why">Sous-pondéré de ${fmt(pos.target - pos.allocation, 1)}% par rapport à la cible (${fmt(pos.allocation,1)}% actuel / ${pos.target}% cible)</div>
+          <div class="dca-calc">
+            <div class="dca-calc-item">
+              <div class="dca-calc-label">Parts à acheter</div>
+              <div class="dca-calc-value">${suggestion.shares} part${suggestion.shares > 1 ? 's' : ''}</div>
+            </div>
+            <div class="dca-calc-item">
+              <div class="dca-calc-label">Prix unitaire</div>
+              <div class="dca-calc-value">${fmt(suggestion.price)} €</div>
+            </div>
+            <div class="dca-calc-item">
+              <div class="dca-calc-label">Coût parts</div>
+              <div class="dca-calc-value">${fmt(suggestion.cost)} €</div>
+            </div>
+            <div class="dca-calc-item">
+              <div class="dca-calc-label">Total (frais inclus)</div>
+              <div class="dca-calc-value">${fmt(suggestion.total)} €</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="openPurchaseModal()">✓ Confirmer l'achat</button>
+        </div>`;
+    }
+
+    // Purchase history
+    if (state.purchases.length > 0) {
+      html += `<div class="card"><div class="card-title">Historique des achats</div>`;
+      [...state.purchases].reverse().forEach(p => {
+        const pos = state.positions.find(x => x.id === p.positionId);
+        html += `<div class="purchase-row">
+          <div class="purchase-info">
+            <div class="purchase-name">${pos?.name || 'Position supprimée'}</div>
+            <div class="purchase-detail">${p.shares} parts × ${fmt(p.price)} € · Frais : ${fmt(p.fees)} €</div>
+          </div>
+          <div class="purchase-amount">
+            <div>${fmt(p.total)} €</div>
+            <div class="purchase-date">${fmtDate(p.date)}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    document.getElementById('dca-content').innerHTML = html;
+  }
+
+  // ── Render: Settings ───────────────────────────────────
+  function renderSettings() {
+    const s = state.settings;
+    const minAmount = (s.feeMin / (s.feeRate / 100)).toFixed(0);
+
+    document.getElementById('settings-content').innerHTML = `
+      <div class="card">
+        <div class="card-title">Mon PEA</div>
+        <div class="setting-group">
+          <div class="setting-label">Date d'ouverture du PEA</div>
+          <input class="setting-input" type="date" id="set-pea-date" value="${s.peaOpenDate}" onchange="updateSetting('peaOpenDate', this.value)" />
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Budget mensuel DCA (€)</div>
+          <input class="setting-input" type="number" id="set-budget" value="${s.monthlyBudget}" min="0" onchange="updateSetting('monthlyBudget', parseFloat(this.value))" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Frais de courtage (LCL)</div>
+        <div class="form-row-2" style="gap:12px;margin-bottom:0;">
+          <div class="setting-group">
+            <div class="setting-label">Taux de commission (%)</div>
+            <input class="setting-input" type="number" value="${s.feeRate}" min="0" step="0.1" onchange="updateSetting('feeRate', parseFloat(this.value))" />
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Commission minimum (€)</div>
+            <input class="setting-input" type="number" value="${s.feeMin}" min="0" step="0.5" onchange="updateSetting('feeMin', parseFloat(this.value))" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-label">Ordre minimum conseillé</div>
+          <div class="setting-row-value">${minAmount} €</div>
+        </div>
+        <div class="broker-tip">
+          <div class="broker-tip-title">💡 Courtiers moins chers</div>
+          <div class="broker-tip-text">LCL facture 0,5% (min 5€). Des alternatives offrent des frais bien inférieurs : <strong>Boursorama</strong> (0,5%, min 1,99€), <strong>Fortuneo</strong> (0,2%, min 1€), <strong>Bourse Direct</strong> (0,99€/ordre fixe). Un transfert de PEA est possible et prend ~3 semaines.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Données</div>
+        <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="exportData()">📤 Exporter JSON</button>
+        <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="document.getElementById('importFile').click()">📥 Importer JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)" />
+        <button class="btn btn-secondary" style="color:var(--red);border-color:rgba(247,86,79,0.3);" onclick="resetData()">🗑 Réinitialiser</button>
+      </div>`;
+  }
+
+  // ── Settings update ────────────────────────────────────
+  function updateSetting(key, val) {
+    state.settings[key] = val;
+    save();
+    renderDCA();
+  }
+
+  // ── Position modal ─────────────────────────────────────
+  function openAddPosition() {
+    document.getElementById('positionModalTitle').textContent = 'Ajouter une position';
+    document.getElementById('pos-name').value = '';
+    document.getElementById('pos-isin').value = '';
+    document.getElementById('pos-ticker').value = '';
+    document.getElementById('pos-shares').value = '';
+    document.getElementById('pos-avgprice').value = '';
+    document.getElementById('pos-target').value = '';
+    document.getElementById('pos-edit-id').value = '';
+    updateAllocRemaining();
+    document.getElementById('positionModal').classList.add('open');
+  }
+
+  function openEditPosition(id) {
+    const pos = state.positions.find(p => p.id === id);
+    if (!pos) return;
+    document.getElementById('positionModalTitle').textContent = 'Modifier la position';
+    document.getElementById('pos-name').value = pos.name;
+    document.getElementById('pos-isin').value = pos.isin || '';
+    document.getElementById('pos-ticker').value = pos.ticker || '';
+    document.getElementById('pos-shares').value = pos.shares;
+    document.getElementById('pos-avgprice').value = pos.avgPrice;
+    document.getElementById('pos-target').value = pos.target;
+    document.getElementById('pos-edit-id').value = id;
+    updateAllocRemaining(id);
+    document.getElementById('positionModal').classList.add('open');
+  }
+
+  function updateAllocRemaining(excludeId = null) {
+    const used = state.positions
+      .filter(p => p.id !== excludeId)
+      .reduce((s, p) => s + (p.target || 0), 0);
+    const remaining = 100 - used;
+    const el = document.getElementById('alloc-remaining');
+    if (el) el.textContent = `Restant disponible : ${remaining}%`;
+  }
+
+  function savePosition() {
+    const name = document.getElementById('pos-name').value.trim();
+    const ticker = document.getElementById('pos-ticker').value.trim();
+    if (!name || !ticker) { alert('Nom et ticker sont obligatoires.'); return; }
+
+    const pos = {
+      id: document.getElementById('pos-edit-id').value || uid(),
+      name,
+      isin: document.getElementById('pos-isin').value.trim(),
+      ticker,
+      shares: parseFloat(document.getElementById('pos-shares').value) || 0,
+      avgPrice: parseFloat(document.getElementById('pos-avgprice').value) || 0,
+      target: parseFloat(document.getElementById('pos-target').value) || 0,
+    };
+
+    const editId = document.getElementById('pos-edit-id').value;
+    if (editId) {
+      const idx = state.positions.findIndex(p => p.id === editId);
+      if (idx !== -1) state.positions[idx] = pos;
+    } else {
+      state.positions.push(pos);
+    }
+
+    save();
+    closeModal('positionModal');
+    fetchPositionPrice(pos.ticker);
+    renderDashboard();
+    renderPortfolio();
+  }
+
+  function deletePosition(id) {
+    if (!confirm('Supprimer cette position ? Les achats associés seront conservés.')) return;
+    state.positions = state.positions.filter(p => p.id !== id);
+    save();
+    renderPortfolio();
+    renderDashboard();
+  }
+
+  // ── Purchase modal ─────────────────────────────────────
+  function openPurchaseModal() {
+    const suggestion = getDCASuggestion();
+    if (!suggestion) return;
+    pendingPurchase = suggestion;
+
+    document.getElementById('buy-shares').value = suggestion.shares;
+    document.getElementById('buy-price').value = fmt(suggestion.price);
+
+    document.getElementById('purchase-confirm-content').innerHTML = `
+      <div class="confirm-detail">
+        <div class="confirm-row"><span class="muted">Position</span><span style="font-weight:600;">${suggestion.position.name}</span></div>
+        <div class="confirm-row"><span class="muted">Budget</span><span>${fmt(suggestion.budget)} €</span></div>
+        <div class="confirm-row"><span class="muted">Frais LCL</span><span class="yellow">${fmt(suggestion.fee)} €</span></div>
+        <div class="confirm-row-total"><span>Total estimé</span><span>${fmt(suggestion.total)} €</span></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Ajustez les parts et le prix si nécessaire :</p>`;
+
+    document.getElementById('purchaseModal').classList.add('open');
+  }
+
+  function confirmPurchase() {
+    if (!pendingPurchase) return;
+    const shares = parseFloat(document.getElementById('buy-shares').value);
+    const price = parseFloat(document.getElementById('buy-price').value);
+    if (!shares || !price || shares <= 0 || price <= 0) { alert('Parts et prix invalides.'); return; }
+
+    const pos = state.positions.find(p => p.id === pendingPurchase.position.id);
+    if (!pos) return;
+
+    const cost = shares * price;
+    const fee = Math.max(cost * state.settings.feeRate / 100, state.settings.feeMin);
+    const total = cost + fee;
+
+    // Update avg price
+    const newTotalShares = pos.shares + shares;
+    pos.avgPrice = newTotalShares > 0 ? (pos.shares * pos.avgPrice + shares * price) / newTotalShares : price;
+    pos.shares = newTotalShares;
+
+    // Record purchase
+    state.purchases.push({
+      id: uid(),
+      positionId: pos.id,
+      date: new Date().toISOString().split('T')[0],
+      shares, price, fees: fee, total,
+    });
+
+    save();
+    closeModal('purchaseModal');
+    pendingPurchase = null;
+    renderDashboard();
+    renderPortfolio();
+    renderDCA();
+  }
+
+  // ── Modals ─────────────────────────────────────────────
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // ── Price fetching ─────────────────────────────────────
+  async function fetchPositionPrice(ticker) {
+    try {
+      const res = await fetch(`/api/price?ticker=${encodeURIComponent(ticker)}`);
+      const data = await res.json();
+      if (data.price) {
+        state.prices[ticker] = { price: data.price, change: data.change, changePercent: data.changePercent };
+        renderDashboard();
+        renderPortfolio();
+        renderDCA();
+      }
+    } catch {}
+  }
+
+  async function refreshAllPrices() {
+    const tickers = [...new Set(state.positions.map(p => p.ticker).filter(Boolean))];
+    if (!tickers.length) return;
+    document.querySelector('.app-header .icon-btn').textContent = '⟳';
+    await Promise.all(tickers.map(t => fetchPositionPrice(t)));
+    document.querySelector('.app-header .icon-btn').textContent = '↻';
+  }
+
+  // ── AI Advice ──────────────────────────────────────────
+  async function getAdvice() {
+    const { positions, totalValue, totalInvested, totalGain, totalGainPct } = calcPortfolio();
+    const out = document.getElementById('advice-output');
+    out.innerHTML = '<div class="advice-loading">🤖 Analyse en cours…</div>';
+
+    try {
+      const res = await fetch('/api/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ positions, totalValue, totalInvested, totalGain, totalGainPct, settings: state.settings }),
+      });
+      const data = await res.json();
+      if (data.advice) {
+        out.innerHTML = `<div class="advice-box">${data.advice}</div>`;
+      } else {
+        out.innerHTML = `<div class="advice-box" style="color:var(--red);">Erreur : ${data.error || 'Réponse invalide'}</div>`;
+      }
+    } catch (e) {
+      out.innerHTML = `<div class="advice-box" style="color:var(--red);">Erreur réseau.</div>`;
+    }
+  }
+
+  // ── Export / Import ────────────────────────────────────
+  function exportData() {
+    const data = { positions: state.positions, purchases: state.purchases, settings: state.settings };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `liberty-pea-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const d = JSON.parse(e.target.result);
+        if (d.positions) state.positions = d.positions;
+        if (d.purchases) state.purchases = d.purchases;
+        if (d.settings) state.settings = { ...state.settings, ...d.settings };
+        save();
+        refreshAllPrices();
+        renderDashboard();
+        alert('Données importées avec succès.');
+      } catch { alert('Fichier JSON invalide.'); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function resetData() {
+    if (!confirm('Réinitialiser toutes les données ? Cette action est irréversible.')) return;
+    state.positions = [];
+    state.purchases = [];
+    state.prices = {};
+    save();
+    renderDashboard();
+    renderPortfolio();
+    renderDCA();
+  }
+
+  // ── Close modals on overlay click ──────────────────────
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  // ── Init ───────────────────────────────────────────────
+  load();
+  renderDashboard();
+  refreshAllPrices();
+</script>
+</body>
+</html>

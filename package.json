@@ -1,0 +1,7 @@
+{
+  "name": "liberty-pea",
+  "version": "1.0.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
+  }
+}
