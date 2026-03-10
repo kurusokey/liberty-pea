@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Liberty PEA" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -312,6 +313,55 @@
       display: flex; justify-content: space-between; padding: 10px 0 0;
       border-top: 1px solid var(--border); margin-top: 6px;
       font-size: 16px; font-weight: 700;
+    }
+
+    /* ── Install Banner ── */
+    #install-banner {
+      position: fixed;
+      bottom: calc(60px + env(safe-area-inset-bottom));
+      left: 12px; right: 12px;
+      background: #1e2235;
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      padding: 14px 14px 8px;
+      z-index: 150;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transform: translateY(0);
+      transition: transform .3s ease, opacity .3s ease;
+    }
+    #install-banner.hidden {
+      transform: translateY(120%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .install-content {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .install-icon {
+      width: 40px; height: 40px; flex-shrink: 0;
+      background: var(--accent); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff;
+    }
+    .install-text {
+      flex: 1; display: flex; flex-direction: column; gap: 3px;
+    }
+    .install-text strong { font-size: 14px; color: var(--text); }
+    .install-text span   { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .install-text em     { font-style: normal; color: var(--text); font-weight: 500; }
+    .install-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; padding: 4px;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    .install-arrow {
+      text-align: center; font-size: 12px; color: var(--accent);
+      margin-top: 6px; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: .4; transform: translateY(0); }
+      50%       { opacity: 1;  transform: translateY(3px); }
     }
   </style>
 </head>
@@ -1136,6 +1186,42 @@
   load();
   renderDashboard();
   refreshAllPrices();
+
+  // ── Install Banner ──────────────────────────────────────
+  function dismissBanner() {
+    document.getElementById('install-banner').classList.add('hidden');
+    localStorage.setItem('pea-install-dismissed', '1');
+  }
+
+  function checkInstallBanner() {
+    const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    const dismissed    = localStorage.getItem('pea-install-dismissed');
+    if (!isIOS || isStandalone || dismissed) {
+      document.getElementById('install-banner').classList.add('hidden');
+    }
+  }
+  checkInstallBanner();
 </script>
+
+<!-- iOS Install Banner -->
+<div id="install-banner">
+  <div class="install-content">
+    <div class="install-icon">PEA</div>
+    <div class="install-text">
+      <strong>Installer Liberty PEA</strong>
+      <span>Appuie sur
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 2px">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        puis <em>« Sur l'écran d'accueil »</em>
+      </span>
+    </div>
+    <button class="install-close" onclick="dismissBanner()">✕</button>
+  </div>
+  <div class="install-arrow">▼</div>
+</div>
 </body>
 </html>
